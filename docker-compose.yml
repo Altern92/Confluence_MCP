@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: confluence-mcp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: confluence_mcp
+      POSTGRES_USER: confluence_mcp
+      POSTGRES_PASSWORD: confluence_mcp
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confluence_mcp -d confluence_mcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: confluence-mcp-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      INDEXING_STORAGE_DRIVER: file
+      INDEXING_STORAGE_PATH: /app/.data/indexing
+      INDEXING_SEMANTIC_ENABLED: "true"
+      INDEXING_VECTOR_STORE_DRIVER: postgres
+      INDEXING_VECTOR_STORE_POSTGRES_URL: postgres://confluence_mcp:confluence_mcp@postgres:5432/confluence_mcp
+      INDEXING_VECTOR_STORE_POSTGRES_SCHEMA: public
+      INDEXING_VECTOR_STORE_POSTGRES_TABLE: confluence_semantic_chunks
+      INDEXING_VECTOR_STORE_POSTGRES_SSL: "false"
+      INDEXING_VECTOR_STORE_POSTGRES_AUTO_INIT: "true"
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./.data:/app/.data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s

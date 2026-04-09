@@ -1,0 +1,30 @@
+{
+  "suiteId": "sample-confluence-retrieval-benchmark",
+  "description": "Starter benchmark cases for comparing keyword and hybrid retrieval against expected Confluence pages.",
+  "cases": [
+    {
+      "id": "release-notes-space-search",
+      "query": "release notes",
+      "scope": {
+        "type": "space",
+        "spaceKey": "ENG"
+      },
+      "expectedPageIds": ["123"],
+      "topK": 5,
+      "modes": ["keyword", "hybrid"],
+      "notes": "Replace expectedPageIds with real Confluence page IDs from your workspace."
+    },
+    {
+      "id": "deployment-page-tree-search",
+      "query": "deployment checklist",
+      "scope": {
+        "type": "page_tree",
+        "pageId": "123"
+      },
+      "expectedPageIds": ["124"],
+      "topK": 5,
+      "modes": ["keyword", "semantic", "hybrid"],
+      "notes": "Useful after local semantic indexing has been populated."
+    }
+  ]
+}

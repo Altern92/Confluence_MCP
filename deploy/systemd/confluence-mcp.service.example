@@ -1,0 +1,18 @@
+[Unit]
+Description=Confluence MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/confluence-mcp
+EnvironmentFile=/opt/confluence-mcp/.env
+ExecStart=/usr/bin/node /opt/confluence-mcp/dist/index.js
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

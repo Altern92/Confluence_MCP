@@ -1,0 +1,45 @@
+{
+  "name": "confluence-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Basic MCP server for scoped Confluence search and page retrieval.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "evaluate:retrieval": "tsx src/evaluation/run-retrieval-benchmark.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "indexing:run": "tsx src/indexing/run-indexing-job.ts",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.2",
+    "@types/pg": "^8.20.0",
+    "eslint": "^10.2.0",
+    "globals": "^17.4.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.1",
+    "vitest": "^4.1.3"
+  }
+}
