@@ -1,6 +1,6 @@
 # RAG Rules For This Server
 
-Sis dokumentas paaiskina, kuri `RAG.md` dalis yra tiesiogiai aktuali siam Confluence MCP serveriui, o kuri ne.
+Sis dokumentas paaiskina, kurios pirminiu RAG uzrasu idejos yra tiesiogiai aktualios siam Confluence MCP serveriui, o kurios ne.
 
 ## Esama architektura
 
@@ -15,7 +15,7 @@ Sis dokumentas paaiskina, kuri `RAG.md` dalis yra tiesiogiai aktuali siam Conflu
   - `hybrid`
 - sync, indexing ir reindex egzistuoja tik kaip vidiniai serverio mechanizmai
 
-## Kas is `RAG.md` tinka tiesiogiai
+## Kas is pirminiu RAG uzrasu tinka tiesiogiai
 
 ### 1. Scope-first retrieval
 
@@ -70,7 +70,7 @@ Tai ypac naudinga VS Code scenarijuje, kur tas pats agentas lygina informacija i
 
 ### 5. Attachment policy
 
-`RAG.md` teisingai akcentuoja attachments. Siame serveryje:
+Pirminiai RAG uzrasai teisingai akcentuoja attachments. Siame serveryje:
 
 - attachment metadata gali buti skaitoma
 - attachment extraction ir attachment-based retrieval turi buti laikomi konservatyviais
@@ -80,7 +80,7 @@ Tai ypac naudinga VS Code scenarijuje, kur tas pats agentas lygina informacija i
 
 ### Per-user authorization fidelity
 
-`RAG.md` akcentuoja verify pagal konkretaus vartotojo tokena. Sio serverio architekturoje to nera, nes:
+Pirminiai RAG uzrasai akcentuoja verify pagal konkretaus vartotojo tokena. Sio serverio architekturoje to nera, nes:
 
 - inbound auth yra API key
 - Confluence fetch'ai eina per viena service account
@@ -130,7 +130,7 @@ Kai serveris bus keliamas i tikra host'a, verta prideti:
 
 ## Praktine isvada
 
-`RAG.md` padeda siam projektui ne tiek kaip teorija apie embeddings, kiek kaip taisykliu rinkinys:
+Sie RAG uzrasai padeda siam projektui ne tiek kaip teorija apie embeddings, kiek kaip taisykliu rinkinys:
 
 - retrieval turi buti scope-first
 - rezultatai turi buti verify-before-reveal
