@@ -26,6 +26,10 @@ function createBaseConfig(): AppConfig {
       wikiBaseUrl: "https://example.atlassian.net/wiki",
       email: "user@example.com",
       apiToken: "token",
+      runtimeAuth: {
+        mode: "service_account",
+        allowBaseUrlOverride: false,
+      },
     },
     policy: {
       allowedSpaceKeys: [],
@@ -170,6 +174,8 @@ describe("loadConfig", () => {
       CONFLUENCE_API_TOKEN: "token",
       CONFLUENCE_ALLOWED_SPACE_KEYS: "eng, OPS ",
       CONFLUENCE_ALLOWED_ROOT_PAGE_IDS: "123, 456",
+      CONFLUENCE_RUNTIME_AUTH_MODE: "require_user",
+      CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE: "true",
       INDEXING_STORAGE_DRIVER: "memory",
       INDEXING_STORAGE_PATH: ".data/indexing",
       INDEXING_SYNC_ENABLED: "false",
@@ -193,6 +199,10 @@ describe("loadConfig", () => {
     expect(config.policy).toEqual({
       allowedSpaceKeys: ["ENG", "OPS"],
       allowedRootPageIds: ["123", "456"],
+    });
+    expect(config.confluence.runtimeAuth).toEqual({
+      mode: "require_user",
+      allowBaseUrlOverride: true,
     });
   });
 });

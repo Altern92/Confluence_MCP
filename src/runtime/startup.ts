@@ -26,6 +26,9 @@ export function logStartupSummary(context: AppContext) {
       baseUrl: context.config.confluence.baseUrl,
       emailConfigured: context.config.confluence.email.length > 0,
       apiTokenConfigured: context.config.confluence.apiToken.length > 0,
+      runtimeAuthMode: context.config.confluence.runtimeAuth?.mode ?? "service_account",
+      runtimeBaseUrlOverrideEnabled:
+        context.config.confluence.runtimeAuth?.allowBaseUrlOverride ?? false,
     },
     indexing: {
       tenantConfigured: context.config.indexing?.tenantId != null,
@@ -68,6 +71,18 @@ export function logStartupWarnings(context: AppContext) {
       appEnv: context.config.app.env,
       transport: context.config.transport,
     });
+  }
+
+  if (
+    context.config.app.env === "production" &&
+    (context.config.confluence.runtimeAuth?.mode ?? "service_account") === "service_account"
+  ) {
+    context.logger.warn(
+      "Production runtime requests are configured to use the shared Confluence service account.",
+      {
+        runtimeAuthMode: context.config.confluence.runtimeAuth?.mode ?? "service_account",
+      },
+    );
   }
 
   if (

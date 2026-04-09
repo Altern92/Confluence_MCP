@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import type { AppContext } from "../../app/context.js";
 import type { ApiKeyAuthContext } from "./auth.js";
+import type { ConfluenceAccessLogContext } from "../../confluence/runtime-auth.js";
 
 export function createRequestLoggingMiddleware(context: AppContext) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -21,6 +22,9 @@ export function createRequestLoggingMiddleware(context: AppContext) {
     res.on("finish", () => {
       const latencyMs = Date.now() - startedAt;
       const apiKeyAuth = res.locals.apiKeyAuth as ApiKeyAuthContext | undefined;
+      const confluenceAccess = res.locals.confluenceAccess as
+        | ConfluenceAccessLogContext
+        | undefined;
 
       context.metrics.recordHttpRequest({
         method: req.method,
@@ -39,6 +43,9 @@ export function createRequestLoggingMiddleware(context: AppContext) {
         apiKeySource: apiKeyAuth?.source ?? null,
         apiKeyFingerprint: apiKeyAuth?.fingerprint ?? null,
         apiKeyMatchedSlot: apiKeyAuth?.matchedSlot ?? null,
+        confluenceAuthMode: confluenceAccess?.mode ?? null,
+        confluenceAuthSource: confluenceAccess?.source ?? null,
+        confluenceAuthFingerprint: confluenceAccess?.fingerprint ?? null,
       });
     });
 

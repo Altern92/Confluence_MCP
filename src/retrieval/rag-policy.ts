@@ -179,7 +179,10 @@ export async function applySearchRagPolicy(input: {
     input.results,
     input.policy.preRetrieval.maxSnippetChars,
   );
-  const candidates = snippetCappedResults.slice(0, topKApplied);
+  const candidates = snippetCappedResults.slice(
+    0,
+    Math.max(topKApplied, input.policy.verification.maxVerifications),
+  );
   const verifiedResults: SearchToolOutput["results"] = [];
   let verifiedCandidates = 0;
 
@@ -189,6 +192,10 @@ export async function applySearchRagPolicy(input: {
         const verifiedResult = await verifySearchResult(input.confluenceClient, candidate);
         verifiedResults.push(verifiedResult);
         verifiedCandidates += 1;
+
+        if (verifiedResults.length >= topKApplied) {
+          break;
+        }
       } catch (error) {
         const dropReason = classifyVerificationDropReason(error as ConfluenceClientError);
         dropReasons[dropReason] += 1;

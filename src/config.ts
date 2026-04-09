@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import * as z from "zod/v4";
+import type { ConfluenceRuntimeAuthMode } from "./confluence/runtime-auth.js";
 
 function emptyStringToUndefined(value: unknown) {
   if (typeof value === "string" && value.trim() === "") {
@@ -106,6 +107,10 @@ const envSchema = z.object({
   CONFLUENCE_API_TOKEN: z.string().min(1),
   CONFLUENCE_ALLOWED_SPACE_KEYS: z.string().optional(),
   CONFLUENCE_ALLOWED_ROOT_PAGE_IDS: z.string().optional(),
+  CONFLUENCE_RUNTIME_AUTH_MODE: z
+    .enum(["service_account", "prefer_user", "require_user"])
+    .default("service_account"),
+  CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE: z.union([z.string(), z.boolean()]).optional(),
   INDEXING_TENANT_ID: z.preprocess(emptyStringToUndefined, z.string().min(1).optional()),
   INDEXING_STORAGE_DRIVER: z.enum(["memory", "file"]).default("memory"),
   INDEXING_STORAGE_PATH: z.string().min(1).default(".data/indexing"),
@@ -170,6 +175,10 @@ export type AppConfig = {
     wikiBaseUrl: string;
     email: string;
     apiToken: string;
+    runtimeAuth?: {
+      mode: ConfluenceRuntimeAuthMode;
+      allowBaseUrlOverride: boolean;
+    };
   };
   policy?: {
     allowedSpaceKeys: string[];
@@ -247,6 +256,13 @@ export function loadConfig(): AppConfig {
       wikiBaseUrl,
       email: env.CONFLUENCE_EMAIL,
       apiToken: env.CONFLUENCE_API_TOKEN,
+      runtimeAuth: {
+        mode: env.CONFLUENCE_RUNTIME_AUTH_MODE,
+        allowBaseUrlOverride: parseBooleanish(
+          env.CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE,
+          false,
+        ),
+      },
     },
     policy: {
       allowedSpaceKeys: csvToArray(env.CONFLUENCE_ALLOWED_SPACE_KEYS).map((value) =>

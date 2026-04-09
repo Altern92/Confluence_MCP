@@ -6,9 +6,10 @@ Sis dokumentas paaiskina, kurios pirminiu RAG uzrasu idejos yra tiesiogiai aktua
 
 - viesas MCP surface yra tik read-only
 - inbound autentikacija yra tik API key
-- Confluence upstream autentikacija vyksta per viena service account:
+- Confluence upstream autentikacija dabar turi du rezimus:
   - `CONFLUENCE_EMAIL`
   - `CONFLUENCE_API_TOKEN`
+  - `CONFLUENCE_RUNTIME_AUTH_MODE=service_account|prefer_user|require_user`
 - `confluence.search` jau palaiko:
   - `keyword`
   - `semantic`
@@ -40,19 +41,24 @@ Tai apsaugo nuo per dideliu atsakymu, nereikalingu fetch'u ir triuksmo rezultate
 
 ### 3. Verify-before-reveal
 
-Sis principas siam serveriui tinka, bet su viena svarbia islyga:
+Sis principas siam serveriui tinka, bet reikia atskirti du scenarijus:
 
-- verification vyksta ne per galutinio vartotojo Confluence tokena
-- verification vyksta per service-account `GET /wiki/api/v2/pages/{id}`
+- kai `CONFLUENCE_RUNTIME_AUTH_MODE=require_user` arba `prefer_user` ir vartotojas pateikia `X-Confluence-*` credentials:
+  - verification vyksta per to konkretaus vartotojo Confluence credentials
+- kai serveris dirba `service_account` rezimu arba vykdo background indexing:
+  - verification vyksta per service-account `GET /wiki/api/v2/pages/{id}`
 
 Tai vis tiek naudinga, nes padeda:
 
 - ismesti pasenusius indekso rezultatus
 - atmesti neberandamus puslapius
-- atmesti service account nematomus puslapius
+- atmesti aktyviam auth kontekstui nematomus puslapius
 - uztikrinti, kad snippet negrizta is aklai pasitiketo lokalaus indekso
 
-Svarbu: tai nera tikras per-user ACL verify.
+Svarbu:
+
+- tik `service_account` rezime tai nera tikras per-user ACL verify
+- `require_user` rezime verify jau gali veikti kaip realus per-user post-filter
 
 ### 4. Citation-first rezultatai
 
@@ -80,15 +86,17 @@ Pirminiai RAG uzrasai teisingai akcentuoja attachments. Siame serveryje:
 
 ### Per-user authorization fidelity
 
-Pirminiai RAG uzrasai akcentuoja verify pagal konkretaus vartotojo tokena. Sio serverio architekturoje to nera, nes:
+Pirminiai RAG uzrasai akcentuoja verify pagal konkretaus vartotojo tokena. Dabar siame projekte tam jau yra pagrindas, bet ne visos storage dalys dar pilnai shared-production brandos:
 
 - inbound auth yra API key
-- Confluence fetch'ai eina per viena service account
+- runtime fetch'ai gali eiti per vartotojo `X-Confluence-*` credentials
+- indexing ir background darbai vis dar eina per service account
 
-Todėl siame projekte nereikia apsimetineti, kad turime per-user ACL enforcement. Turime:
+Todėl siame projekte reikia aiskiai skirti:
 
 - deployment-time scope enforcement
-- service-account-level verification
+- per-user verify runtime requestams, kai ijungtas `require_user` arba `prefer_user`
+- service-account-level verification background darbams
 - read-only public MCP surface
 
 ## Kas jau igyvendinta
@@ -113,7 +121,9 @@ Siame etape `confluence.search` taiko `default-secure-rag`:
 - scope yra privalomas
 - `topK` yra clamp'inamas politikos ribomis
 - snippet ilgis ribojamas
-- rezultatai verify'inami per service-account page fetch
+- rezultatai verify'inami per aktyvu auth konteksta:
+  - vartotojo credentials runtime requestuose, jei jie naudojami
+  - service account background srautuose
 - verify nepraeje kandidatai drop'inami
 
 ## Kitas rekomenduojamas zingsnis

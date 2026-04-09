@@ -6,6 +6,7 @@ import type { AppContext } from "../app/context.js";
 import { buildSyncStatusSnapshot } from "../indexing/sync-status.js";
 import { createConfluenceMcpServer } from "../mcp/create-server.js";
 import { createApiKeyAuthMiddleware, resolveApiKeyAuth } from "./middleware/auth.js";
+import { createConfluenceRuntimeAuthMiddleware } from "./middleware/confluence-runtime-auth.js";
 import { createHostPolicyMiddleware } from "./middleware/host-policy.js";
 import { createOriginPolicyMiddleware } from "./middleware/origin-policy.js";
 import { createRequestBodyLimitMiddleware } from "./middleware/request-body-limit.js";
@@ -36,6 +37,7 @@ export function createHttpApp(context: AppContext) {
   app.use("/mcp", createRequestBodyLimitMiddleware(context));
   app.use("/mcp", createRequestTimeoutMiddleware(context));
   app.use("/mcp", createApiKeyAuthMiddleware(context));
+  app.use("/mcp", createConfluenceRuntimeAuthMiddleware(context));
   app.use("/mcp", createHostPolicyMiddleware(context));
   app.use("/mcp", createOriginPolicyMiddleware(context));
 

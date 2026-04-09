@@ -45,7 +45,9 @@ cd /opt/confluence-mcp
 
 ## 3. Konfiguracija
 
-Susikurk realu serverio `.env` is [`.env.example`](../../.env.example).
+Jei darai paprasta vieno proceso arba lokalu setup, susikurk `.env` is [`.env.example`](../../.env.example).
+
+Jei darai shared serveri uz esamo `nginx` ir planuoji naudoti [docker-compose.server.yml](../../docker-compose.server.yml), pradek nuo [`.env.server.example`](../../.env.server.example).
 
 Minimalus variantas serveriui:
 
@@ -69,9 +71,15 @@ LOG_LEVEL=info
 CONFLUENCE_BASE_URL=https://your-company.atlassian.net
 CONFLUENCE_EMAIL=service-account@example.com
 CONFLUENCE_API_TOKEN=<confluence_api_token>
+CONFLUENCE_RUNTIME_AUTH_MODE=service_account
+CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE=false
 
 CONFLUENCE_ALLOWED_SPACE_KEYS=ENG,OPS
 CONFLUENCE_ALLOWED_ROOT_PAGE_IDS=
+
+POSTGRES_DB=confluence_mcp
+POSTGRES_USER=confluence_mcp
+POSTGRES_PASSWORD=<stiprus_postgres_slaptazodis>
 
 INDEXING_TENANT_ID=
 INDEXING_STORAGE_DRIVER=file
@@ -105,6 +113,27 @@ Pastaba:
 - `HOST=127.0.0.1` yra rekomenduojamas, jei isoreje stoves `nginx`
 - `CONFLUENCE_ALLOWED_SPACE_KEYS` labai rekomenduojama uzpildyti
 - jei dar nenaudoji `pgvector`, palik `file` storage
+- jei nori shared MCP "tarpines stoteles" modelio su vartotoju Confluence credentials, naudok:
+  - `CONFLUENCE_RUNTIME_AUTH_MODE=require_user`
+  - reverse proxy turi forwardinti `X-Confluence-Authorization` arba `X-Confluence-Email` + `X-Confluence-Api-Token`
+
+Jei naudoji `docker-compose.server.yml`:
+
+- `HOST` ir `PORT` konteineryje jau suvaldyti compose lygiu
+- `INDEXING_VECTOR_STORE_POSTGRES_URL` bus sugeneruotas is `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- nereikia publishinti naujo host porto Confluence MCP servisui
+- reikia tureti isorini Docker tinkla `mcp-server_internal`
+- `MCP_ALLOWED_HOSTS` verta papildyti `127.0.0.1,localhost`, kad container healthcheck'ai negautu `403`
+
+Greitas shared-server bootstrap iki `.env` uzpildymo tasko:
+
+```bash
+cd /opt/confluence-mcp
+cp .env.server.example .env
+docker compose -f docker-compose.server.yml config
+```
+
+Po to lieka tik uzpildyti `.env` ir testi deploy smoke testus.
 
 ## 4. Build ir patikra
 

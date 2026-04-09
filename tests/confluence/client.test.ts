@@ -27,6 +27,10 @@ function createTestConfig(): AppConfig {
       wikiBaseUrl: "https://example.atlassian.net/wiki",
       email: "user@example.com",
       apiToken: "token",
+      runtimeAuth: {
+        mode: "service_account",
+        allowBaseUrlOverride: false,
+      },
     },
     defaults: {
       topK: 10,
@@ -308,6 +312,195 @@ describe("ConfluenceClient", () => {
         href: "https://example.atlassian.net/wiki/api/v2/pages/123/attachments?limit=25&cursor=cursor-456&filename=release-notes.pdf&mediaType=application%2Fpdf",
       }),
       expect.any(Object),
+    );
+  });
+
+  it("uses request-scoped Confluence credentials when they are present", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ results: [] }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+    );
+
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const config = createTestConfig();
+    config.confluence.runtimeAuth = {
+      mode: "prefer_user",
+      allowBaseUrlOverride: false,
+    };
+
+    const client = new ConfluenceClient({
+      config,
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    });
+
+    await runWithRequestContext(
+      {
+        requestId: "req-user-1",
+        traceId: "trace-user-1",
+        confluenceAccess: {
+          mode: "user",
+          source: "x-confluence-email-token",
+          fingerprint: "fp-user-123",
+          baseUrl: "https://example.atlassian.net",
+        },
+        runtimeConfluenceAuth: {
+          mode: "user",
+          source: "x-confluence-email-token",
+          baseUrl: "https://example.atlassian.net",
+          wikiBaseUrl: "https://example.atlassian.net/wiki",
+          email: "person@example.com",
+          apiToken: "user-token",
+          fingerprint: "fp-user-123",
+        },
+      },
+      () => client.search('type = page AND space = "ENG"', 10),
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as {
+      headers?: Record<string, string>;
+    };
+
+    expect(requestInit.headers?.Authorization).toBe(
+      `Basic ${Buffer.from("person@example.com:user-token", "utf8").toString("base64")}`,
+    );
+  });
+
+  it("ignores request-scoped Confluence credentials when runtime auth stays on service_account", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ results: [] }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+    );
+
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = new ConfluenceClient({
+      config: createTestConfig(),
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    });
+
+    await runWithRequestContext(
+      {
+        requestId: "req-user-ignore",
+        traceId: "trace-user-ignore",
+        confluenceAccess: {
+          mode: "user",
+          source: "x-confluence-email-token",
+          fingerprint: "fp-user-ignore",
+          baseUrl: "https://example.atlassian.net",
+        },
+        runtimeConfluenceAuth: {
+          mode: "user",
+          source: "x-confluence-email-token",
+          baseUrl: "https://example.atlassian.net",
+          wikiBaseUrl: "https://example.atlassian.net/wiki",
+          email: "person@example.com",
+          apiToken: "user-token",
+          fingerprint: "fp-user-ignore",
+        },
+      },
+      () => client.search('type = page AND space = "ENG"', 10),
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as {
+      headers?: Record<string, string>;
+    };
+
+    expect(requestInit.headers?.Authorization).toBe(
+      `Basic ${Buffer.from("user@example.com:token", "utf8").toString("base64")}`,
+    );
+  });
+
+  it("requires request-scoped credentials for runtime requests when configured", async () => {
+    const config = createTestConfig();
+    config.confluence.runtimeAuth = {
+      mode: "require_user",
+      allowBaseUrlOverride: false,
+    };
+
+    const client = new ConfluenceClient({
+      config,
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    });
+
+    await expect(
+      runWithRequestContext(
+        {
+          requestId: "req-user-2",
+          traceId: "trace-user-2",
+          confluenceAccess: null,
+          runtimeConfluenceAuth: null,
+        },
+        () => client.search('type = page AND space = "ENG"', 10),
+      ),
+    ).rejects.toMatchObject({
+      name: "ConfluenceAuthError",
+      status: 401,
+    });
+  });
+
+  it("still uses the service account outside HTTP request context when require_user is enabled", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ results: [] }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+    );
+
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const config = createTestConfig();
+    config.confluence.runtimeAuth = {
+      mode: "require_user",
+      allowBaseUrlOverride: false,
+    };
+
+    const client = new ConfluenceClient({
+      config,
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    });
+
+    await client.search('type = page AND space = "ENG"', 10);
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as {
+      headers?: Record<string, string>;
+    };
+
+    expect(requestInit.headers?.Authorization).toBe(
+      `Basic ${Buffer.from("user@example.com:token", "utf8").toString("base64")}`,
     );
   });
 });

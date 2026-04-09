@@ -41,6 +41,10 @@ export function createTestConfig(): AppConfig {
       wikiBaseUrl: "https://example.atlassian.net/wiki",
       email: "user@example.com",
       apiToken: "token",
+      runtimeAuth: {
+        mode: "service_account",
+        allowBaseUrlOverride: false,
+      },
     },
     defaults: {
       topK: 10,

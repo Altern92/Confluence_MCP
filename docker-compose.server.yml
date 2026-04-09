@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-confluence_mcp}
       POSTGRES_USER: ${POSTGRES_USER:-confluence_mcp}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-confluence_mcp}
-    ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - ./.pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,6 +19,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    networks:
+      - backend
 
   mcp:
     build:
@@ -45,8 +45,10 @@ services:
       INDEXING_VECTOR_STORE_POSTGRES_TABLE: confluence_semantic_chunks
       INDEXING_VECTOR_STORE_POSTGRES_SSL: "false"
       INDEXING_VECTOR_STORE_POSTGRES_AUTO_INIT: "true"
-    ports:
-      - "${MCP_HOST_PORT:-3001}:3000"
+      CONFLUENCE_RUNTIME_AUTH_MODE: ${CONFLUENCE_RUNTIME_AUTH_MODE:-require_user}
+      CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE: ${CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE:-false}
+    expose:
+      - "3000"
     volumes:
       - ./.data:/app/.data
     healthcheck:
@@ -55,3 +57,13 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+    networks:
+      - backend
+      - ingress
+
+networks:
+  backend:
+    driver: bridge
+  ingress:
+    external: true
+    name: mcp-server_internal

@@ -70,17 +70,23 @@ Deployment references:
 - `docs/deployment/UBUNTU-DEPLOY.md`
 - `deploy/systemd/confluence-mcp.service.example`
 - `deploy/nginx/confluence-mcp.conf.example`
+- `deploy/nginx/confluence-mcp-paths.conf.example`
+- `.env.server.example`
+- `docker-compose.server.yml`
 
 ## Current limitations
 
 - default transport: `http`
 - `stdio` kept only as an optional local fallback, not for ChatGPT connector use
-- auth: Confluence API token only
+- request-scoped Confluence credentials now support:
+  - `X-Confluence-Authorization: Basic base64(email:api_token)`
+  - `X-Confluence-Email` plus `X-Confluence-Api-Token`
+- shared production document index and sync state stores are still local-only
 - default retrieval mode: keyword
 - optional semantic/hybrid retrieval via hash embeddings, with vector storage selectable across `memory`, `file`, or `postgres`
 - sync worker is in-memory and process-local
 - local index persistence is available through the file-backed storage driver
-- shared vector persistence is available through the Postgres/pgvector driver, but shared document index and sync state stores are still local-only
+- shared vector persistence is available through the Postgres/pgvector driver
 - delete reconciliation depends on periodic full snapshot passes, not webhooks
 
 ## Project structure
@@ -102,8 +108,9 @@ Deployment references:
 
 ## Setup
 
-1. Copy `.env.example` to `.env`
-2. Fill in:
+1. Copy `.env.example` to `.env` for local/dev usage.
+2. For shared server deployment behind an existing nginx, copy `.env.server.example` to `.env` instead.
+3. Fill in:
 
 ```env
 APP_ENV=development
@@ -119,8 +126,15 @@ HTTP_REQUEST_TIMEOUT_MS=30000
 CONFLUENCE_BASE_URL=https://your-site.atlassian.net
 CONFLUENCE_EMAIL=your-account@company.com
 CONFLUENCE_API_TOKEN=your-api-token
+CONFLUENCE_RUNTIME_AUTH_MODE=service_account
+CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE=false
 CONFLUENCE_ALLOWED_SPACE_KEYS=
 CONFLUENCE_ALLOWED_ROOT_PAGE_IDS=
+POSTGRES_DB=confluence_mcp
+POSTGRES_USER=confluence_mcp
+POSTGRES_PASSWORD=change-me
+POSTGRES_HOST_PORT=5432
+MCP_HOST_PORT=3001
 INDEXING_TENANT_ID=
 INDEXING_STORAGE_DRIVER=file
 INDEXING_STORAGE_PATH=.data/indexing
@@ -160,6 +174,22 @@ Optional deployment guardrails:
   - limits public space-scoped search and internal sync/reindex to approved spaces
 - `CONFLUENCE_ALLOWED_ROOT_PAGE_IDS=123456,987654`
   - limits root-based public tree lookups such as `page`, `page_tree`, and descendants flows
+
+Runtime auth modes:
+
+- `CONFLUENCE_RUNTIME_AUTH_MODE=service_account`
+  - keeps the previous behavior and always uses the configured service account
+- `CONFLUENCE_RUNTIME_AUTH_MODE=prefer_user`
+  - uses per-request `X-Confluence-*` credentials when they are present and otherwise falls back to the service account
+- `CONFLUENCE_RUNTIME_AUTH_MODE=require_user`
+  - requires per-request `X-Confluence-*` credentials for runtime MCP requests while still allowing service-account indexing outside HTTP request context
+
+Recommended shared-server mode:
+
+- `CONFLUENCE_RUNTIME_AUTH_MODE=require_user`
+- keep `CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE=false` unless you intentionally support multiple approved Confluence tenants
+- start from `.env.server.example` and fill only the real server values and secrets
+- include `127.0.0.1,localhost` in `MCP_ALLOWED_HOSTS` for the container-local `/health` and `/ready` checks
 
 ## Commands
 
@@ -215,6 +245,12 @@ http://localhost:3000/mcp
 
 If you want to connect ChatGPT, expose that endpoint through a public HTTPS tunnel or reverse proxy and use the public `/mcp` URL in the connector setup.
 
+When you deploy behind a shared reverse proxy and want per-user Confluence access, forward:
+
+- `X-Confluence-Authorization`
+- or `X-Confluence-Email` and `X-Confluence-Api-Token`
+- optionally `X-Confluence-Base-Url` when base-url override is explicitly enabled
+
 If metrics are enabled, the server also exposes:
 
 ```text
@@ -267,6 +303,27 @@ Important note:
 - when you run `docker compose up`, the compose file overrides the vector store to Postgres for the containerized MCP server
 - the compose stack publishes the MCP HTTP endpoint on `http://localhost:3001` to avoid conflicts with a locally running server on `3000`
 - this means you can keep one `.env` and choose the mode you want per run
+
+For shared server deployment behind an existing reverse proxy, use `docker-compose.server.yml` instead. It:
+
+- does not publish a new host port for the MCP container
+- joins the external Docker network `mcp-server_internal`
+- keeps Postgres private to the compose stack
+- defaults runtime auth to `require_user`
+- reads shared Postgres credentials from `.env` via `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD`
+
+Recommended shared-server bootstrap:
+
+```bash
+cp .env.server.example .env
+docker compose -f docker-compose.server.yml config
+```
+
+Only after `.env` is filled should you continue with:
+
+```bash
+docker compose -f docker-compose.server.yml up --build -d
+```
 
 ## Request correlation and tracing
 

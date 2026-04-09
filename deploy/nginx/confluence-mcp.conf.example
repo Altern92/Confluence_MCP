@@ -12,8 +12,15 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Authorization $http_authorization;
         proxy_set_header X-API-Key $http_x_api_key;
+        proxy_set_header X-Confluence-Authorization $http_x_confluence_authorization;
+        proxy_set_header X-Confluence-Email $http_x_confluence_email;
+        proxy_set_header X-Confluence-Api-Token $http_x_confluence_api_token;
+        proxy_set_header X-Confluence-Base-Url $http_x_confluence_base_url;
+        proxy_set_header Connection "";
 
+        proxy_buffering off;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        chunked_transfer_encoding on;
     }
 }

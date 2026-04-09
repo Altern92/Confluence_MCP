@@ -17,12 +17,20 @@ export function createRequestContextMiddleware() {
         ? incomingTraceId.trim()
         : randomUUID();
 
-    runWithRequestContext({ requestId, traceId }, () => {
-      res.locals.requestId = requestId;
-      res.locals.traceId = traceId;
-      res.setHeader("X-Request-Id", requestId);
-      res.setHeader("X-Trace-Id", traceId);
-      next();
-    });
+    runWithRequestContext(
+      {
+        requestId,
+        traceId,
+        confluenceAccess: null,
+        runtimeConfluenceAuth: null,
+      },
+      () => {
+        res.locals.requestId = requestId;
+        res.locals.traceId = traceId;
+        res.setHeader("X-Request-Id", requestId);
+        res.setHeader("X-Trace-Id", traceId);
+        next();
+      },
+    );
   };
 }

@@ -3,6 +3,7 @@ import type { Logger } from "../logging/logger.js";
 import { getRequestContext } from "../logging/request-context.js";
 import { MetricsRegistry } from "../observability/metrics-registry.js";
 import type { BodyFormat } from "../types/tool-schemas.js";
+import { resolveRuntimeConfluenceAuth } from "./runtime-auth.js";
 import type {
   ConfluenceContentRestrictionsResponse,
   ConfluencePageAttachmentsResponse,
@@ -139,7 +140,8 @@ export class ConfluenceClient {
   }
 
   private async requestJson<T>(path: string, query: Record<string, QueryValue>): Promise<T> {
-    const url = new URL(path, `${this.config.confluence.baseUrl}/`);
+    const auth = resolveRuntimeConfluenceAuth(this.config);
+    const url = new URL(path, `${auth.baseUrl}/`);
 
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined) {
@@ -158,7 +160,7 @@ export class ConfluenceClient {
           const response = await fetch(url, {
             headers: {
               Accept: "application/json",
-              Authorization: `Basic ${this.buildBasicAuthToken()}`,
+              Authorization: `Basic ${this.buildBasicAuthToken(auth.email, auth.apiToken)}`,
               ...(requestId ? { "X-Request-Id": requestId } : {}),
               ...(traceId ? { "X-Trace-Id": traceId } : {}),
             },
@@ -181,6 +183,9 @@ export class ConfluenceClient {
             latencyMs,
             requestId,
             traceId,
+            confluenceAuthMode: auth.mode,
+            confluenceAuthSource: auth.source,
+            confluenceAuthFingerprint: auth.fingerprint,
             rateLimitHeaders: extractRateLimitHeaders(response.headers),
           });
 
@@ -208,8 +213,8 @@ export class ConfluenceClient {
     );
   }
 
-  private buildBasicAuthToken(): string {
-    const rawToken = `${this.config.confluence.email}:${this.config.confluence.apiToken}`;
+  private buildBasicAuthToken(email: string, apiToken: string): string {
+    const rawToken = `${email}:${apiToken}`;
     return Buffer.from(rawToken, "utf8").toString("base64");
   }
 }

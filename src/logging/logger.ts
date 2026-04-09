@@ -1,4 +1,4 @@
-import { getRequestContext } from "./request-context.js";
+import { getRequestLogContext } from "./request-context.js";
 
 const redactedKeyPattern = /authorization|token|pat|password|secret/i;
 const logLevels = ["debug", "info", "warn", "error"] as const;
@@ -43,7 +43,7 @@ function sanitizeValue(value: unknown): unknown {
 }
 
 function writeLog(level: LogLevel, message: string, context?: unknown) {
-  const requestContext = getRequestContext();
+  const requestContext = getRequestLogContext();
   const mergedContext =
     requestContext == null
       ? context
