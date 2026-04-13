@@ -207,6 +207,72 @@ describe("ConfluenceClient", () => {
     );
   });
 
+  it("calls the v2 single-space endpoint", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ id: "42", key: "ENG" }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+    );
+
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = new ConfluenceClient({
+      config: createTestConfig(),
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    });
+
+    await client.getSpaceById("42");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        href: "https://example.atlassian.net/wiki/api/v2/spaces/42",
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it("calls the v2 single-page endpoint without body-format for metadata lookups", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ id: "123", spaceId: "42" }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+    );
+
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = new ConfluenceClient({
+      config: createTestConfig(),
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    });
+
+    await client.getPageMetadata("123");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        href: "https://example.atlassian.net/wiki/api/v2/pages/123",
+      }),
+      expect.any(Object),
+    );
+  });
+
   it("calls the v1 content restrictions endpoint for a page", async () => {
     const fetchMock = vi.fn(
       async () =>

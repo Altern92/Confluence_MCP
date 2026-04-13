@@ -107,9 +107,9 @@ Igyvendinta:
 
 Dar nepatvirtinta gyvai:
 
-- pilnas pradinis indexing paleidimas
 - semantic/hybrid paieska ant realiai uzpildyto shared indekso
 - pilni cross-user leakage testai su dviem atskirais vartotojais
+- production schedule nuolatiniam indekso atnaujinimui dar neturi pilno acceptance testo
 
 Jau patvirtinta lokaliai ne per Docker:
 
@@ -128,9 +128,26 @@ Jau patvirtinta gyvai per Docker ir shared nginx:
 - nauji route'ai per esama ADO `nginx` veikia:
   - `http://10.121.21.76/confluence/health`
   - `http://10.121.21.76/confluence/mcp`
-  - `https://ado.mcp.thermofisher.lt/confluence/health`
-  - `https://ado.mcp.thermofisher.lt/confluence/mcp`
+- `https://ado.mcp.thermofisher.lt/confluence/health`
+- `https://ado.mcp.thermofisher.lt/confluence/mcp`
 - esamas ADO `http://10.121.21.76/health` ir `https://ado.mcp.thermofisher.lt/health` neluzo
+- pilnas bootstrap indexing baigtas sekmingai:
+  - `runId: 5edbca47-1373-4b61-bff0-4e48da7f1901`
+  - `startedAt: 2026-04-09T12:59:40.147Z`
+  - `finishedAt: 2026-04-10T07:25:56.616Z`
+  - `pagesDiscovered: 12155`
+  - `pagesIndexed: 12154`
+  - `chunksProduced: 78602`
+- dabartinis snapshot mastas po bootstrap:
+  - `documents.json`: `12155` dokumentai
+  - pgvector: apie `78k` vector irasu
+  - realiai uzpildyti `131` space is leistino `135` saraso
+- paruostas production weekly reindex kelias:
+- hoste jau ijungtas production weekly reindex kelias:
+  - `scripts/indexing-weekly-sync.sh`
+  - `deploy/systemd/confluence-mcp-weekly-sync.service.example`
+  - `deploy/systemd/confluence-mcp-weekly-sync.timer.example`
+  - `systemd` timer aktyvus penktadieni `20:00 UTC`
 
 Techninis apribojimas sioje masinoje siuo metu:
 
@@ -151,8 +168,8 @@ Svarbiausi ribojimai:
 - `src/retrieval/postgres-vector-store.ts`
   - Postgres vis dar naudojamas tik vector store, ne visam document index
 - nepadarytas gyvas end-to-end deploy testas su realiu `nginx`
-- nepadarytas gyvas indexing paleidimas
 - nepadaryti pilni cross-user leakage integraciniai testai su realiu backend'u
+- nepadarytas pilnas production-level multi-user acceptance test planas
 
 ## Tikslines architekturos kryptis
 
@@ -339,23 +356,28 @@ Uzduotys:
 - [x] apsispresti del document index storage:
   - laikinas variantas `file`
   - ilgalaikis variantas reikalaus naujo shared store, nes dabar jo dar nera
-- [ ] nustatyti approved indexing scope:
+- [x] nustatyti approved indexing scope:
   - `CONFLUENCE_ALLOWED_SPACE_KEYS`
   - opcioniskai `CONFLUENCE_ALLOWED_ROOT_PAGE_IDS`
-- [ ] apsispresti del inicialaus indexing paleidimo budo:
+- [x] apsispresti del inicialaus indexing paleidimo budo:
   - `full`
   - `space`
   - batch pagal spaces
-- [ ] nustatyti `INDEXING_SYNC_ENABLED`
-- [ ] nustatyti `INDEXING_SYNC_RUN_ON_STARTUP`
-- [ ] nustatyti `INDEXING_SYNC_SPACE_KEYS`
-- [ ] paleisti pradini indexing job
-- [ ] patikrinti dokumentu ir chunk'u kieki
+- [x] nustatyti `INDEXING_SYNC_ENABLED`
+- [x] nustatyti `INDEXING_SYNC_RUN_ON_STARTUP`
+- [x] nustatyti `INDEXING_SYNC_SPACE_KEYS`
+- [x] paleisti pradini indexing job
+- [x] patikrinti dokumentu ir chunk'u kieki
 - [ ] patikrinti, kad semantic search grazina kandidatus
-- [ ] ivertinti reindex strategija:
+- [x] ivertinti reindex strategija:
   - poll interval
   - full reconcile interval
   - retry modelis
+
+Pastaba:
+
+- `INDEXING_SYNC_ENABLED` samoningai paliktas `false`
+- production atnaujinimui pasirinktas host-level `systemd timer` su savaitiniu pilnu reindex penktadieni `20:00 UTC`
 
 Priemimo kriterijai:
 
@@ -619,8 +641,7 @@ Sis variantas yra teisinga kryptis, bet jis jau reikalauja kodo pakeitimu, ne vi
 Svarbiausi blockeriai pries tavo norima galutini modeli:
 
 - shared document index production storage dar nera pilnai centralizuotas
-- pradinis indexing dar nepaleistas
 - semantic/hybrid paieska dar netestuota ant realiai uzpildyto shared indekso
 - nepadaryti gyvi integraciniai leakage testai su realiais vartotoju credentials
 
-Kodo prasme pirmas "shared index + per-user credentials" pagrindas jau yra, o bazinis gyvas deploy jau irgi patvirtintas. Pagrindiniai likusieji darbai dabar yra indexing, production-grade storage ir pilni leakage / saugumo testai.
+Kodo prasme pirmas "shared index + per-user credentials" pagrindas jau yra, bazinis gyvas deploy ir pilnas bootstrap indexing jau patvirtinti. Pagrindiniai likusieji darbai dabar yra production-grade storage stiprinimas, semantic/hybrid kokybes patikra, savaiminio savaitinio refresh uzbaigimas ir pilni leakage / saugumo testai.

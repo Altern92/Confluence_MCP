@@ -190,6 +190,8 @@ Recommended shared-server mode:
 - keep `CONFLUENCE_RUNTIME_ALLOW_BASE_URL_OVERRIDE=false` unless you intentionally support multiple approved Confluence tenants
 - start from `.env.server.example` and fill only the real server values and secrets
 - include `127.0.0.1,localhost` in `MCP_ALLOWED_HOSTS` for the container-local `/health` and `/ready` checks
+- keep `INDEXING_SYNC_ENABLED=false` and use an operator-controlled refresh path for production indexing
+- for the current shared Docker deployment, the recommended production refresh path is a host-level weekly `systemd timer`
 
 ## Commands
 
@@ -451,6 +453,7 @@ Typical production pattern:
   - `X-Trace-Id`
 - MCP server validates `Host` / `Origin`
 - inbound MCP API-key auth remains enabled
+- indexing refresh remains an internal operator workflow, not a public MCP tool
 
 This is the preferred pattern for a shared team endpoint.
 
@@ -862,6 +865,22 @@ Behavior:
 - `space` reindexes one space through the same internal full-sync path
 - `page` reloads and reindexes a single page
 - all commands print structured JSON to stdout and keep logs on stderr
+
+Production helper scripts for the shared Docker deployment:
+
+```bash
+./scripts/indexing-preflight.sh
+./scripts/indexing-status.sh
+./scripts/indexing-bootstrap.sh
+./scripts/indexing-weekly-sync.sh --dry-run
+```
+
+Recommended production refresh model:
+
+- keep `INDEXING_SYNC_ENABLED=false`
+- use one controlled full refresh each Friday evening
+- the repo includes `deploy/systemd/confluence-mcp-weekly-sync.service.example`
+- the repo includes `deploy/systemd/confluence-mcp-weekly-sync.timer.example`
 
 ## Postgres vector store
 

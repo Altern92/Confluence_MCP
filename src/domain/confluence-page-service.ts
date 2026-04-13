@@ -17,12 +17,18 @@ import type {
   GetPageRestrictionsToolOutput,
 } from "../types/tool-schemas.js";
 import type { ConfluenceDomainServiceOptions } from "./confluence-domain-service-options.js";
+import { ConfluencePageSpacePolicy } from "./confluence-page-space-policy.js";
 
 export class ConfluencePageService {
-  constructor(private readonly options: ConfluenceDomainServiceOptions) {}
+  private readonly pageSpacePolicy: ConfluencePageSpacePolicy;
+
+  constructor(private readonly options: ConfluenceDomainServiceOptions) {
+    this.pageSpacePolicy = new ConfluencePageSpacePolicy(options.config, options.confluenceClient);
+  }
 
   async getPage({ pageId, bodyFormat }: GetPageToolInput): Promise<GetPageToolOutput> {
     const page = await this.options.confluenceClient.getPage(pageId, bodyFormat);
+    await this.pageSpacePolicy.assertResolvedPageAllowed(page, "Page lookup");
 
     return {
       pageId: String(page.id),
@@ -42,6 +48,7 @@ export class ConfluencePageService {
   async getPageAncestors({
     pageId,
   }: GetPageAncestorsToolInput): Promise<GetPageAncestorsToolOutput> {
+    await this.pageSpacePolicy.assertPageAllowed(pageId, "Page ancestors lookup");
     const response = await this.options.confluenceClient.getPageAncestors(pageId);
 
     return {
@@ -54,6 +61,7 @@ export class ConfluencePageService {
   async getPageRestrictions({
     pageId,
   }: GetPageRestrictionsToolInput): Promise<GetPageRestrictionsToolOutput> {
+    await this.pageSpacePolicy.assertPageAllowed(pageId, "Page restrictions lookup");
     const response = await this.options.confluenceClient.getPageRestrictions(pageId);
 
     return {
@@ -69,6 +77,7 @@ export class ConfluencePageService {
     filename,
     mediaType,
   }: GetPageAttachmentsToolInput): Promise<GetPageAttachmentsToolOutput> {
+    await this.pageSpacePolicy.assertPageAllowed(pageId, "Page attachments lookup");
     const response = await this.options.confluenceClient.getPageAttachments(pageId, {
       limit,
       cursor,

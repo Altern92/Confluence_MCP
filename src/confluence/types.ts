@@ -27,6 +27,15 @@ export type ConfluenceSpacesResponse = {
   _links?: ConfluenceLinks;
 };
 
+export type ConfluenceSpaceResponse = {
+  id?: string | number;
+  key?: string;
+  name?: string;
+  type?: string;
+  status?: string;
+  _links?: ConfluenceLinks;
+};
+
 export type ConfluenceSearchResult = {
   id?: string | number;
   title?: string;

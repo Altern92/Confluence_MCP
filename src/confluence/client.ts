@@ -10,6 +10,7 @@ import type {
   ConfluencePageAncestorsResponse,
   ConfluencePageDescendantsResponse,
   ConfluencePageResponse,
+  ConfluenceSpaceResponse,
   ConfluenceSpacePagesResponse,
   ConfluenceSpacesResponse,
   ConfluenceSearchResponse,
@@ -87,6 +88,10 @@ export class ConfluenceClient {
     });
   }
 
+  async getPageMetadata(pageId: string): Promise<ConfluencePageResponse> {
+    return this.requestJson<ConfluencePageResponse>(`/wiki/api/v2/pages/${pageId}`, {});
+  }
+
   async getPageAncestors(pageId: string): Promise<ConfluencePageAncestorsResponse> {
     return this.requestJson<ConfluencePageAncestorsResponse>(
       `/wiki/api/v2/pages/${pageId}/ancestors`,
@@ -137,6 +142,10 @@ export class ConfluenceClient {
         mediaType: options.mediaType,
       },
     );
+  }
+
+  async getSpaceById(spaceId: string): Promise<ConfluenceSpaceResponse> {
+    return this.requestJson<ConfluenceSpaceResponse>(`/wiki/api/v2/spaces/${spaceId}`, {});
   }
 
   private async requestJson<T>(path: string, query: Record<string, QueryValue>): Promise<T> {

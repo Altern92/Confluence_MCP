@@ -2,3 +2,6 @@ node_modules/
 dist/
 .env
 package-lock.json
+.data/
+.pgdata/
+.tmp/

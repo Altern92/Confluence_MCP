@@ -124,6 +124,7 @@ Jei naudoji `docker-compose.server.yml`:
 - nereikia publishinti naujo host porto Confluence MCP servisui
 - reikia tureti isorini Docker tinkla `mcp-server_internal`
 - `MCP_ALLOWED_HOSTS` verta papildyti `127.0.0.1,localhost`, kad container healthcheck'ai negautu `403`
+- production rezime galima palikti `INDEXING_SYNC_ENABLED=false` ir naudoti hosto `systemd timer` savaitiniam pilnam reindex
 
 Greitas shared-server bootstrap iki `.env` uzpildymo tasko:
 
@@ -181,6 +182,45 @@ Naudingi logai:
 
 ```bash
 journalctl -u confluence-mcp -f
+```
+
+### 6.1. Savaitinis penktadienio vakaro sync per `systemd timer`
+
+Jei naudoji Docker varianta su `docker-compose.server.yml`, rekomenduojamas production kelias yra:
+
+- palikti `INDEXING_SYNC_ENABLED=false`
+- naudoti hosto `systemd timer`, kuris penktadieniais vakare paleidzia viena pilna reindex pagal dabartini `.env`
+
+Repo jau turi sablonus:
+
+- [confluence-mcp-weekly-sync.service.example](../../deploy/systemd/confluence-mcp-weekly-sync.service.example)
+- [confluence-mcp-weekly-sync.timer.example](../../deploy/systemd/confluence-mcp-weekly-sync.timer.example)
+
+Numatytas grafikas:
+
+- kiekviena penktadieni `20:00 UTC`
+
+Diegimas:
+
+```bash
+sudo cp deploy/systemd/confluence-mcp-weekly-sync.service.example /etc/systemd/system/confluence-mcp-weekly-sync.service
+sudo cp deploy/systemd/confluence-mcp-weekly-sync.timer.example /etc/systemd/system/confluence-mcp-weekly-sync.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now confluence-mcp-weekly-sync.timer
+sudo systemctl status confluence-mcp-weekly-sync.timer
+```
+
+Patikrinimas nieko nepaleidziant:
+
+```bash
+./scripts/indexing-weekly-sync.sh --dry-run
+systemctl list-timers confluence-mcp-weekly-sync.timer
+```
+
+Naudingi logai:
+
+```bash
+journalctl -u confluence-mcp-weekly-sync.service -f
 ```
 
 ## 7. `nginx` reverse proxy

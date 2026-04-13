@@ -1,0 +1,15 @@
+[Unit]
+Description=Confluence MCP Weekly Reindex
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/confluence-mcp
+ExecStart=/bin/bash /opt/confluence-mcp/scripts/indexing-weekly-sync.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

@@ -782,4 +782,145 @@ describe("ConfluenceContentService", () => {
       nextCursor: "next-attachments",
     });
   });
+
+  it("rejects page lookups outside the configured space allowlist", async () => {
+    const config = createTestConfig();
+    config.policy = {
+      allowedSpaceKeys: ["OPS"],
+      allowedRootPageIds: [],
+    };
+    const getPage = vi.fn(async () => ({
+      id: "123",
+      title: "Release Notes",
+      status: "current",
+      spaceId: "42",
+      body: {
+        storage: {
+          value: "<p>Release notes body</p>",
+        },
+      },
+      version: {
+        number: 7,
+        createdAt: "2026-04-08T10:00:00Z",
+      },
+    }));
+    const getSpaceById = vi.fn(async () => ({
+      id: "42",
+      key: "ENG",
+      name: "Engineering",
+      type: "global",
+      status: "current",
+    }));
+
+    const service = new ConfluenceContentService({
+      config,
+      confluenceClient: {
+        search: vi.fn(),
+        getPage,
+        getPageMetadata: vi.fn(),
+        getSpaceById,
+        getPageAncestors: vi.fn(),
+        getPageRestrictions: vi.fn(),
+        getPageDescendants: vi.fn(),
+        getPageAttachments: vi.fn(),
+      } as unknown as ConfluenceClient,
+    });
+
+    await expect(
+      service.getPage({
+        pageId: "123",
+        bodyFormat: "storage",
+      }),
+    ).rejects.toThrow('Page lookup is not allowed for space "ENG"');
+    expect(getSpaceById).toHaveBeenCalledWith("42");
+  });
+
+  it("rejects page ancestors lookups outside the configured space allowlist", async () => {
+    const config = createTestConfig();
+    config.policy = {
+      allowedSpaceKeys: ["OPS"],
+      allowedRootPageIds: [],
+    };
+    const getPageMetadata = vi.fn(async () => ({
+      id: "123",
+      spaceId: "42",
+    }));
+    const getSpaceById = vi.fn(async () => ({
+      id: "42",
+      key: "ENG",
+      name: "Engineering",
+      type: "global",
+      status: "current",
+    }));
+    const getPageAncestors = vi.fn(async () => ({
+      results: [],
+      _links: {},
+    }));
+
+    const service = new ConfluenceContentService({
+      config,
+      confluenceClient: {
+        search: vi.fn(),
+        getPage: vi.fn(),
+        getPageMetadata,
+        getSpaceById,
+        getPageAncestors,
+        getPageRestrictions: vi.fn(),
+        getPageDescendants: vi.fn(),
+        getPageAttachments: vi.fn(),
+      } as unknown as ConfluenceClient,
+    });
+
+    await expect(
+      service.getPageAncestors({
+        pageId: "123",
+      }),
+    ).rejects.toThrow('Page ancestors lookup is not allowed for space "ENG"');
+    expect(getPageAncestors).not.toHaveBeenCalled();
+  });
+
+  it("rejects page descendants lookups outside the configured space allowlist", async () => {
+    const config = createTestConfig();
+    config.policy = {
+      allowedSpaceKeys: ["OPS"],
+      allowedRootPageIds: [],
+    };
+    const getPageMetadata = vi.fn(async () => ({
+      id: "123",
+      spaceId: "42",
+    }));
+    const getSpaceById = vi.fn(async () => ({
+      id: "42",
+      key: "ENG",
+      name: "Engineering",
+      type: "global",
+      status: "current",
+    }));
+    const getPageDescendants = vi.fn(async () => ({
+      results: [],
+      _links: {},
+    }));
+
+    const service = new ConfluenceContentService({
+      config,
+      confluenceClient: {
+        search: vi.fn(),
+        getPage: vi.fn(),
+        getPageMetadata,
+        getSpaceById,
+        getPageAncestors: vi.fn(),
+        getPageRestrictions: vi.fn(),
+        getPageDescendants,
+        getPageAttachments: vi.fn(),
+      } as unknown as ConfluenceClient,
+    });
+
+    await expect(
+      service.getPageDescendants({
+        pageId: "123",
+        limit: 25,
+      }),
+    ).rejects.toThrow('Page descendants lookup is not allowed for space "ENG"');
+    expect(getPageDescendants).not.toHaveBeenCalled();
+  });
 });
